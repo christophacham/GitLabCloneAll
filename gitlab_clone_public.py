@@ -1,23 +1,25 @@
-import os
 import subprocess
+import os
+import json
 
-# Configuration
-github_username = "target"  # Target GitHub username
-clone_directory = '/path/to/clone/directory' 
 
-# Authenticate with GitHub (if you haven't already)
-subprocess.run(["gh", "auth", "login"])  
+def clone_all_repos(username):
+    # Get a list of repositories
+    repos_info = subprocess.run(["gh", "api", f"/users/{username}/repos"], capture_output=True, text=True)
+    repos_info_json = json.loads(repos_info.stdout)
 
-# List public repositories of the user
-projects = subprocess.run(["gh", "repo", "list", github_username, "--public"], capture_output=True, text=True).stdout.splitlines()
+    if "message" in repos_info_json and repos_info_json["message"] == "Not Found":
+        print("User not found or repositories not accessible.")
+        return
 
-# Clone each project
-for project_slug in projects:
-    clone_path = os.path.join(clone_directory, project_slug)
-    if not os.path.exists(clone_path):
-        print(f"Cloning https://github.com/{project_slug} into {clone_path}")
-        subprocess.run(["gh", "repo", "clone", project_slug, clone_path])
-    else:
-        print(f"Repository already exists: {clone_path}")
+    if isinstance(repos_info_json, list):
+        # Iterate through each repository and clone it
+        for repo_info in repos_info_json:
+            repo_name = repo_info["name"]
+            clone_url = repo_info["clone_url"]
+            print(f"Cloning repository: {repo_name}")
+            subprocess.run(["gh", "repo", "clone", clone_url])
 
-print("All public projects cloned.")
+
+# Replace 'Element84' with the desired GitHub username
+clone_all_repos("target")
